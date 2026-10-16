@@ -1,5 +1,5 @@
 <script>
-  import { app, formatBytes, stats, setCols, setLang, setTheme, setImportPx, createDemo, colsNow, SIZES, JPEG_QUALITY } from '../lib/state.svelte.js';
+  import { app, formatBytes, stats, setCols, setLang, setTheme, setUi, createDemo, colsNow, UI_SIZES, deviceLang } from '../lib/state.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import { offlineCapable } from '../lib/pwa.js';
   import NavBar from '../components/NavBar.svelte';
@@ -12,7 +12,6 @@
   const langs = [{ code: 'auto', label: () => t('settings.autoLang') }, { code: 'pt', label: () => 'Português' }, { code: 'en', label: () => 'English' }];
   const colOptions = ['auto', 3, 4, 5, 6, 7, 8];
   // Tamanho aproximado de um JPEG a 85% (cresce com a área).
-  const kb = (px) => Math.round(160 * (px / 1024) ** 2);
   async function demo() {
     const p = await createDemo();
     app.settingsOpen = false;
@@ -39,7 +38,7 @@
   <div class="group">
     {#each langs as l}
       <button class="row" onclick={() => setLang(l.code)}>
-        <span class="grow">{l.label()}</span>
+        <div class="grow">{l.label()}{#if l.code === 'auto'}<div class="sub">{deviceLang() === 'pt' ? 'Português' : 'English'}</div>{/if}</div>
         {#if app.langPref === l.code}<span class="ck"><Icon name="check" size={20} stroke={2.6} /></span>{/if}
       </button>
     {/each}
@@ -58,19 +57,18 @@
   </div>
   <div class="foot">{t('settings.colsAutoHint')}</div>
 
-  <div class="section-title">{t('settings.resolution')}</div>
-  <div class="group">
-    {#each SIZES as px}
-      <button class="row" onclick={() => setImportPx(px)}>
-        <div class="grow">
-          <div>{t(`settings.res.${px}`)}</div>
-          <div class="sub">{px} px · {t('settings.perPhoto', { kb: kb(px) })}</div>
-        </div>
-        {#if app.importPx === px}<span class="ck"><Icon name="check" size={20} stroke={2.6} /></span>{/if}
-      </button>
-    {/each}
+  <div class="section-title">{t('settings.uiSize')}</div>
+  <div class="group pad">
+    <div class="sizes">
+      {#each UI_SIZES as v, i}
+        <button class:on={app.ui === v} onclick={() => setUi(v)} aria-label={t(`settings.ui.${i}`)}>
+          <span style:font-size="{13 + i * 3}px">Aa</span>
+        </button>
+      {/each}
+    </div>
+    <div class="sizename">{t(`settings.ui.${UI_SIZES.indexOf(app.ui)}`)}</div>
   </div>
-  <div class="foot">{t('settings.resHint')} JPEG {Math.round(JPEG_QUALITY * 100)}%.</div>
+  <div class="foot">{t('settings.uiHint')}</div>
 
   <div class="section-title">{t('settings.storage')}</div>
   <div class="group">
@@ -88,7 +86,7 @@
     <button class="row tap" onclick={demo}>
       <span class="grow link">{t('settings.demo')}</span><Icon name="photos" size={18} />
     </button>
-    <div class="row"><span class="grow">{t('settings.version')}</span><span class="value">1.1.0</span></div>
+    <div class="row"><span class="grow">{t('settings.version')}</span><span class="value">1.2.0</span></div>
   </div>
   <div style="height: calc(var(--sab) + 30px)"></div>
 </div>
@@ -111,4 +109,9 @@
   .seg button.on { background: var(--bg2); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
   .preview { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 3px; margin-top: 12px; }
   .preview span { height: 26px; border-radius: 3px; background: var(--accent); opacity: 0.35; animation: pop 0.3s var(--ease); }
+  .sizes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .sizes button { height: 56px; border-radius: 10px; background: var(--fill); display: grid; place-items: center; font-weight: 600; color: var(--label2); transition: background 0.25s var(--ease), color 0.25s, transform 0.15s; }
+  .sizes button:active { transform: scale(0.95); }
+  .sizes button.on { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .sizename { text-align: center; font-size: 13px; color: var(--label2); margin-top: 10px; }
 </style>

@@ -7,8 +7,13 @@ import { t, lang, locale } from './i18n.svelte.js';
 export const MAPS = [t24, tendons];
 export const mapById = (id) => MAPS.find((m) => m.id === id);
 export const JPEG_QUALITY = 0.85;
-export const SIZES = [800, 1024, 1600, 2048];
-export const deviceLang = () => ((navigator.languages?.[0] || navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en');
+export const IMPORT_PX = 1024;
+export const UI_SIZES = [0.9, 1, 1.1, 1.2];
+/** Idioma do iPhone: a primeira língua preferida decide; só português fica em PT, o resto em inglês. */
+export const deviceLang = () => {
+  const first = navigator.languages?.[0] || navigator.language || Intl.DateTimeFormat().resolvedOptions().locale || 'en';
+  return first.toLowerCase().startsWith('pt') ? 'pt' : 'en';
+};
 
 let uid = 0;
 const newId = (p = 'id') => `${p}${Date.now().toString(36)}${(uid++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -29,7 +34,7 @@ export const app = $state({
   width: typeof window !== 'undefined' ? window.innerWidth : 390,
   theme: 'auto', // 'auto' | 'light' | 'dark'
   langPref: 'auto', // 'auto' | 'pt' | 'en'
-  importPx: 1024,
+  ui: 1, // tamanho da interface (escala de elementos e letra)
   group: null,
   persisted: false,
   updateReady: false
@@ -146,14 +151,16 @@ export async function boot() {
       }))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     if (settings.cols) app.cols = settings.cols;
-    if (settings.lang) app.langPref = settings.lang;
+    // 'langPref' substitui o antigo 'lang' da 1.0, que fixava PT sem querer.
+    if (['auto', 'pt', 'en'].includes(settings.langPref)) app.langPref = settings.langPref;
     if (settings.theme) app.theme = settings.theme;
-    if (SIZES.includes(settings.importPx)) app.importPx = settings.importPx;
+    if (UI_SIZES.includes(settings.ui)) app.ui = settings.ui;
   } catch (e) {
     console.error('boot', e);
   }
   applyLang();
   applyTheme();
+  applyUi();
   addEventListener('resize', () => (app.width = innerWidth));
   addEventListener('languagechange', applyLang);
   try {
@@ -175,7 +182,7 @@ export async function requestPersistence() {
 /** Colunas em uso: automático = pela largura do ecrã (5 num iPhone normal). */
 export function colsNow() {
   if (app.cols !== 'auto') return app.cols;
-  return Math.max(4, Math.min(7, Math.round(app.width / 80)));
+  return Math.max(4, Math.min(7, Math.round(app.width / (80 * app.ui))));
 }
 
 export function setCols(n) {
@@ -191,7 +198,7 @@ function applyLang() {
 export function setLang(pref) {
   app.langPref = pref;
   applyLang();
-  db.putSetting('lang', pref).catch(() => {});
+  db.putSetting('langPref', pref).catch(() => {});
 }
 
 function applyTheme() {
@@ -208,9 +215,14 @@ export function setTheme(theme) {
   db.putSetting('theme', theme).catch(() => {});
 }
 
-export function setImportPx(px) {
-  app.importPx = px;
-  db.putSetting('importPx', px).catch(() => {});
+function applyUi() {
+  document.documentElement.style.fontSize = `${16 * app.ui}px`;
+}
+
+export function setUi(v) {
+  app.ui = v;
+  applyUi();
+  db.putSetting('ui', v).catch(() => {});
 }
 
 if (typeof window !== 'undefined') matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme());
@@ -365,7 +377,7 @@ async function decode(blob) {
   }
 }
 
-function drawScaled(source, max = app.importPx) {
+function drawScaled(source, max = IMPORT_PX) {
   const sw = source.width || source.naturalWidth, sh = source.height || source.naturalHeight;
   const scale = Math.min(1, max / Math.max(sw, sh));
   const c = document.createElement('canvas');
@@ -524,7 +536,7 @@ export async function importZip(file) {
         const src = new Blob([bytes], { type: 'image/jpeg' });
         const bmp = await decode(src);
         const bw = bmp.width || bmp.naturalWidth, bh = bmp.height || bmp.naturalHeight;
-        const c = drawScaled(bmp, /\.jpe?g$/i.test(f.name) ? 256 : app.importPx);
+        const c = drawScaled(bmp, /\.jpe?g$/i.test(f.name) ? 256 : IMPORT_PX);
         bmp.close?.();
         let out = await encode(c);
         // JPEG vindo do Mac: guarda o ficheiro original tal e qual (sem perder qualidade).

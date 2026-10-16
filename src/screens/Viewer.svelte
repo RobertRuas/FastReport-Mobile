@@ -15,6 +15,11 @@
 
   let scale = $state(1), tx = $state(0), ty = $state(0), sw = $state(0), sy = $state(0);
   let smooth = $state(false);
+  // Carrossel: anterior, atual e seguinte lado a lado; o trilho desliza com o dedo.
+  const GAP = 20;
+  let W = $state(innerWidth);
+  let shift = $state(0), sliding = $state(false);
+  const slides = $derived([-1, 0, 1].map((k) => ({ k, p: list[index + k] })).filter((x) => x.p));
   let chrome = $state(true);
   let moving = $state(false);
   let el;
@@ -25,6 +30,7 @@
   function reset() { smooth = true; scale = 1; tx = 0; ty = 0; sw = 0; sy = 0; setTimeout(() => (smooth = false), 250); }
 
   function ts(e) {
+    if (sliding) { mode = null; return; }
     smooth = false;
     if (e.touches.length === 2) {
       mode = 'pinch';
@@ -40,7 +46,7 @@
       }
       lastTap = now;
       mode = scale > 1 ? 'pan' : 'swipe';
-      t0 = { x: t.clientX, y: t.clientY, tx, ty, axis: null };
+      t0 = { x: t.clientX, y: t.clientY, tx, ty, axis: null, at: now, hist: [] };
     }
   }
   function tm(e) {
@@ -54,7 +60,12 @@
       if (mode === 'pan') { tx = t0.tx + dx / scale; ty = t0.ty + dy / scale; }
       else {
         if (!t0.axis && Math.hypot(dx, dy) > 8) t0.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-        if (t0.axis === 'x') sw = dx;
+        if (t0.axis === 'x') {
+          const edge = (dx > 0 && index === 0) || (dx < 0 && index === list.length - 1);
+          sw = edge ? dx * 0.3 : dx;
+          t0.hist.push([Date.now(), dx]);
+          if (t0.hist.length > 5) t0.hist.shift();
+        }
         if (t0.axis === 'y') sy = Math.max(0, dy);
       }
     }
@@ -64,11 +75,22 @@
     if (mode === 'swipe') {
       if (Math.abs(sw) < 6 && sy < 6 && Date.now() - lastTap < 250) setTimeout(() => { if (lastTap) chrome = !chrome; }, 290);
       if (sy > 110) { close(); return; }
-      if (sw < -70 && index < list.length - 1) app.viewer.index = index + 1;
-      else if (sw > 70 && index > 0) app.viewer.index = index - 1;
-      reset();
+      const h = t0.hist, v = h.length > 1 ? (h[h.length - 1][1] - h[0][1]) / Math.max(1, h[h.length - 1][0] - h[0][0]) : 0;
+      const dir = sw < -W * 0.4 || (v < -0.35 && sw < -20) ? 1 : sw > W * 0.4 || (v > 0.35 && sw > 20) ? -1 : 0;
+      if (dir && list[index + dir]) slide(dir);
+      else reset();
     } else if (scale < 1.05) reset();
     mode = null;
+  }
+
+  function slide(dir) {
+    sliding = true;
+    shift = -dir * (W + GAP) - sw;
+    setTimeout(() => {
+      sliding = false;
+      app.viewer.index = index + dir;
+      shift = 0; sw = 0; sy = 0; scale = 1; tx = 0; ty = 0;
+    }, 340);
   }
 
   $effect(() => {
@@ -96,16 +118,20 @@
 </script>
 
 <div class="viewer" style:background="rgba(0,0,0,{1 - Math.min(sy / 400, 0.6)})" in:zoom={{ start: 0.92, duration: 320, easing: iosEase }} out:fade={{ duration: 200 }}>
-  <div class="area" bind:this={el}>
-    {#if photo}
-      <img
-        src={photo.full}
-        alt=""
-        class:smooth
-        style:transform="translate({sw}px, {sy}px) scale({scale * (1 - Math.min(sy / 1200, 0.25))}) translate({tx}px, {ty}px)"
-        draggable="false"
-      />
-    {/if}
+  <div class="area" bind:this={el} bind:clientWidth={W}>
+    <div class="track" class:sliding class:smooth style:transform="translate3d({sw + shift}px, 0, 0)">
+      {#each slides as { k, p } (p.id)}
+        <div class="slide" style:transform="translate3d({k * (W + GAP)}px, 0, 0)">
+          <img
+            src={p.full}
+            alt=""
+            class:smooth
+            style:transform={k === 0 ? `translate(0, ${sy}px) scale(${scale * (1 - Math.min(sy / 1200, 0.25))}) translate(${tx}px, ${ty}px)` : null}
+            draggable="false"
+          />
+        </div>
+      {/each}
+    </div>
   </div>
 
   {#if chrome}
@@ -143,8 +169,12 @@
 <style>
   .viewer { position: absolute; inset: 0; z-index: 700; color: #fff; }
   .area { position: absolute; inset: 0; overflow: hidden; touch-action: none; display: grid; place-items: center; }
-  .area img { max-width: 100%; max-height: 100%; object-fit: contain; will-change: transform; }
-  .area img.smooth { transition: transform 0.25s var(--ease); }
+  .track { position: absolute; inset: 0; will-change: transform; }
+  .track.smooth { transition: transform 0.3s var(--ease); }
+  .track.sliding { transition: transform 0.34s var(--ease); }
+  .slide { position: absolute; inset: 0; display: grid; place-items: center; }
+  .slide img { max-width: 100%; max-height: 100%; object-fit: contain; will-change: transform; animation: none; }
+  .slide img.smooth { transition: transform 0.25s var(--ease); }
   header {
     position: absolute; top: 0; left: 0; right: 0;
     display: grid; grid-template-columns: 52px 1fr 52px; align-items: center;

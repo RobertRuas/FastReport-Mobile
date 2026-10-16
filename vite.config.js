@@ -29,8 +29,28 @@ function serviceWorker() {
   };
 }
 
+/** px → rem nos estilos, para o "Tamanho da interface" escalar tudo pelo font-size do <html>. */
+const pxRe = /(-?\d*\.?\d+)px/g;
+const toRem = (css) =>
+  css
+    .split('\n')
+    .map((l) => (l.includes('@media') ? l : l.replace(pxRe, (m, n) => (Math.abs(+n) <= 1 ? m : `${+(n / 16).toFixed(4)}rem`))))
+    .join('\n');
+
+function remScale() {
+  return {
+    name: 'fastreport-rem',
+    enforce: 'pre',
+    transform(code, id) {
+      const file = id.split('?')[0];
+      if (file.endsWith('.css')) return toRem(code);
+      if (file.endsWith('.svelte')) return code.replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/g, (_, a, b, c) => a + toRem(b) + c);
+    }
+  };
+}
+
 export default defineConfig({
-  plugins: [svelte(), serviceWorker()],
+  plugins: [remScale(), svelte(), serviceWorker()],
   base: './',
   server: { host: true, port: 5173 },
   preview: { host: true, port: 4173 }
