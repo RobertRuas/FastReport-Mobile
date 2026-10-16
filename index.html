@@ -17,6 +17,26 @@
   </head>
   <body>
     <div id="app"></div>
+    <!-- Rede de segurança: se a app não arrancar, permite limpar a cache da app (as fotos ficam). -->
+    <script>
+      setTimeout(function () {
+        if (document.getElementById('app').childElementCount) return;
+        var pt = /^pt/i.test(navigator.language || '');
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;inset:0;display:grid;place-content:center;gap:16px;padding:24px;text-align:center;font:17px -apple-system,system-ui,sans-serif;background:#f2f2f7;color:#000';
+        d.innerHTML = '<div>' + (pt ? 'A app não arrancou.' : 'The app did not start.') + '</div><button style="font:inherit;font-weight:600;padding:14px 22px;border:0;border-radius:14px;background:#0f9d63;color:#fff">' + (pt ? 'Reparar e recarregar' : 'Repair and reload') + '</button><div style="font-size:13px;color:#888">' + (pt ? 'Os projetos e as fotos não são apagados.' : 'Projects and photos are kept.') + '</div>';
+        d.querySelector('button').onclick = async function () {
+          try {
+            var regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(function (r) { return r.unregister(); }));
+            var keys = await caches.keys();
+            await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          } catch (e) {}
+          location.reload();
+        };
+        document.body.appendChild(d);
+      }, 5000);
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

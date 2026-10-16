@@ -2,8 +2,14 @@
 const CACHE = 'fastreport-__VERSION__';
 const ASSETS = __ASSETS__;
 
+// cache: 'reload' ignora a cache HTTP do GitHub Pages (10 min). Sem isto, a versão nova
+// podia guardar o index.html antigo, que aponta para ficheiros que já não existem: ecrã branco.
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('message', (event) => {
