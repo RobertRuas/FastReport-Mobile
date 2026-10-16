@@ -1,5 +1,6 @@
 <script>
   import { fade, fly } from 'svelte/transition';
+  import { iosEase } from '../lib/ease.js';
   import { t } from '../lib/i18n.svelte.js';
   let { title = '', actions = [], onclose } = $props();
   function pick(a) {
@@ -8,8 +9,8 @@
   }
 </script>
 
-<div class="scrim" transition:fade={{ duration: 200 }} onclick={onclose} role="presentation"></div>
-<div class="as" transition:fly={{ y: 300, duration: 320, opacity: 1 }}>
+<div class="scrim" transition:fade={{ duration: 260 }} onclick={onclose} role="presentation"></div>
+<div class="as" transition:fly={{ y: 320, duration: 440, opacity: 1, easing: iosEase }}>
   <div class="box">
     {#if title}<div class="title">{title}</div>{/if}
     {#each actions as a}

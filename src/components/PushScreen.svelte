@@ -1,12 +1,12 @@
 <script>
   // Ecrã empurrado da direita, com o gesto de deslizar da borda para voltar (como no iOS).
-  import { cubicOut } from 'svelte/easing';
+  import { iosEase } from '../lib/ease.js';
   let { onback, children, z = 10 } = $props();
   let dx = $state(0);
   let dragging = $state(false);
   let startX = 0, startY = 0, width = 1, locked = false;
   function push(node) {
-    return { duration: 420, easing: cubicOut, css: (t) => `transform: translateX(${(1 - t) * 100}%); box-shadow: -10px 0 30px rgba(0,0,0,${0.25 * t})` };
+    return { duration: 520, easing: iosEase, css: (t) => `transform: translate3d(${(1 - t) * 100}%,0,0); box-shadow: -10px 0 30px rgba(0,0,0,${0.25 * t})` };
   }
   function ts(e) {
     const t = e.touches[0];
@@ -23,7 +23,7 @@
   function te() {
     if (!dragging) return;
     dragging = false;
-    if (dx > width * 0.33) { dx = width; setTimeout(() => { onback?.(); dx = 0; }, 220); }
+    if (dx > width * 0.33) { dx = width; setTimeout(() => { onback?.(); dx = 0; }, 280); }
     else dx = 0;
   }
 </script>
@@ -34,7 +34,7 @@
 </div>
 
 <style>
-  .push { transition: transform 0.25s var(--ease); box-shadow: -10px 0 30px rgba(0, 0, 0, 0.25); }
+  .push { transition: transform 0.32s var(--ease); box-shadow: -10px 0 30px rgba(0, 0, 0, 0.25); }
   .push.dragging { transition: none; }
   .edge { position: absolute; left: 0; top: 0; bottom: 0; width: 22px; z-index: 50; }
 </style>

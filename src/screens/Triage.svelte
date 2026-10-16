@@ -2,7 +2,7 @@
   import { app, current, mapById, photosIn, slotLabel, groupsOf, movePhoto, undo, editPhoto, toast } from '../lib/state.svelte.js';
   import Icon from '../components/Icon.svelte';
   import CropOverlay from '../components/CropOverlay.svelte';
-  import { cubicOut } from 'svelte/easing';
+  import { iosEase } from '../lib/ease.js';
   import { t } from '../lib/i18n.svelte.js';
   import { haptic } from '../lib/haptic.js';
 
@@ -28,9 +28,10 @@
   let cropping = $state(false);
   let dx = $state(0);
   let anim = $state(false);
+  let enter = $state('pop'); // como entra a foto seguinte
 
   function slide(node) {
-    return { duration: 420, easing: cubicOut, css: (t) => `transform: translateY(${(1 - t) * 100}%)` };
+    return { duration: 500, easing: iosEase, css: (t) => `transform: translate3d(0,${(1 - t) * 100}%,0)` };
   }
 
   function count(slot) {
@@ -44,6 +45,7 @@
   function classify(slot) {
     if (!photo || busy || cropping) return;
     haptic();
+    enter = 'pop';
     ghost = { src: photo.full, key: Math.random(), trash: slot.isTrash };
     flash = { text: slot.isTrash ? t('slot.trash') : slotLabel(slot, true), key: Math.random(), trash: slot.isTrash };
     movePhoto(project, photo.id, slot.id);
@@ -52,6 +54,7 @@
   }
 
   function doUndo() {
+    enter = 'back';
     const last = undo(project);
     if (!last) return toast(t('app.nothingToUndo'));
     if (last.type === 'move' && last.slot === inboxId) app.triage.index = last.index;
@@ -61,6 +64,7 @@
   function go(step) {
     const next = index + step;
     if (next < 0 || next >= list.length) { dx = 0; return; }
+    enter = 'none';
     anim = true;
     dx = step > 0 ? -window.innerWidth : window.innerWidth;
     setTimeout(() => {
@@ -85,6 +89,7 @@
   async function edit(kind, crop) {
     if (!photo || busy) return;
     busy = true;
+    enter = 'fade';
     try { await editPhoto(project, photo, kind, crop); } finally { busy = false; }
   }
   function applyCrop(rect) { cropping = false; edit('crop', rect); }
@@ -120,7 +125,7 @@
   <div class="stage" onpointerdown={pd} onpointermove={pm} onpointerup={pu} onpointercancel={pu} role="presentation">
     {#if photo}
       {#key photo.id + photo.full}
-        <img class="main" class:anim src={photo.full} alt="" style:transform="translateX({dx}px)" draggable="false" />
+        <img class="main enter-{enter}" class:anim src={photo.full} alt="" style:transform="translateX({dx}px)" draggable="false" />
       {/key}
       {#if cropping}
         <CropOverlay src={photo.full} w={photo.w} h={photo.h} oncancel={() => (cropping = false)} onapply={applyCrop} />
@@ -196,13 +201,19 @@
   .progress span { display: block; height: 100%; background: var(--yellow); transition: width 0.3s var(--ease); }
   .stage { flex: 1; min-height: 0; position: relative; overflow: hidden; touch-action: none; }
   .main { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-  .main.anim { transition: transform 0.2s var(--ease); }
+  .main.anim { transition: transform 0.24s var(--ease); }
+  .enter-pop { animation: enterPop 0.34s var(--ease) both; }
+  .enter-back { animation: enterBack 0.34s var(--ease) both; }
+  .enter-fade { animation: enterFade 0.25s ease-out both; }
+  @keyframes enterPop { from { opacity: 0; transform: scale(0.93); } }
+  @keyframes enterBack { from { opacity: 0; transform: translateY(30%) scale(0.5); } }
+  @keyframes enterFade { from { opacity: 0.4; } }
   .ghost {
     position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
-    animation: away 0.38s var(--ease) forwards; pointer-events: none;
+    animation: away 0.42s var(--ease) forwards; pointer-events: none;
   }
   .ghost.trash { animation-name: awayTrash; }
-  @keyframes away { to { transform: translateY(45%) scale(0.35); opacity: 0; } }
+  @keyframes away { to { transform: translateY(55%) scale(0.3); opacity: 0; } }
   @keyframes awayTrash { to { transform: translate(40%, 50%) scale(0.2) rotate(12deg); opacity: 0; } }
   .flash {
     position: absolute; left: 50%; top: 42%;

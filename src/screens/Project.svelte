@@ -7,6 +7,7 @@
   import PinchGrid from '../components/PinchGrid.svelte';
   import ActionSheet from '../components/ActionSheet.svelte';
   import Review from './Review.svelte';
+  import { fade } from 'svelte/transition';
 
   const p = $derived(current());
   const s = $derived(p ? stats(p) : null);
@@ -49,6 +50,8 @@
   </NavBar>
 
   <div class="content">
+    {#key app.tab}
+    <div class="tabview" in:fade={{ duration: 220 }}>
     {#if app.tab === 'inbox'}
       <div class="scroll" onscroll={(e) => (scrolled = e.currentTarget.scrollTop > 4)}>
         {#if !s.total}
@@ -100,6 +103,8 @@
     {:else}
       <Review project={p} />
     {/if}
+    </div>
+    {/key}
   </div>
 
   <nav class="tabbar">
@@ -142,6 +147,7 @@
 
 <style>
   .content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .tabview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .hero { padding: 8px 16px 18px; }
   .big { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
   .lbl { font-size: 17px; font-weight: 600; margin-top: 2px; }

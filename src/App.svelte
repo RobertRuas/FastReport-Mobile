@@ -64,8 +64,8 @@
 <Alert />
 
 <style>
-  .base { position: absolute; inset: 0; transition: transform 0.42s var(--ease), opacity 0.42s; }
-  .base.pushed { transform: translateX(-28%); opacity: 0.6; }
+  .base { position: absolute; inset: 0; transition: transform 0.52s var(--ease), opacity 0.52s var(--ease); will-change: transform; }
+  .base.pushed { transform: translate3d(-30%, 0, 0); opacity: 0.55; }
   .splash { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); }
   .splash img { width: 88px; height: 88px; border-radius: 20px; animation: in 0.4s ease-out; }
   @keyframes in { from { transform: scale(0.9); opacity: 0; } }

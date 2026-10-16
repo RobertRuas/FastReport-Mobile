@@ -4,6 +4,8 @@
   import NavBar from '../components/NavBar.svelte';
   import NavButton from '../components/NavButton.svelte';
   import Icon from '../components/Icon.svelte';
+  import { fly } from 'svelte/transition';
+  import { iosEase } from '../lib/ease.js';
   let scrolled = $state(false);
   const totalBytes = $derived(app.projects.reduce((a, p) => a + stats(p).bytes, 0));
   const unexported = $derived(app.projects.filter((p) => !p.exportedAt && p.photos.length).length);
@@ -35,10 +37,10 @@
         <div class="warn"><Icon name="info" size={18} /> <span>{unexported === 1 ? t('home.warn1') : t('home.warn', { n: unexported })}</span></div>
       {/if}
       <div class="list">
-        {#each app.projects as p (p.id)}
+        {#each app.projects as p, i (p.id)}
           {@const s = stats(p)}
           {@const cv = covers(p)}
-          <button class="card" onclick={() => open(p)}>
+          <button class="card" onclick={() => open(p)} in:fly={{ y: 16, duration: 450, delay: Math.min(i, 8) * 40, easing: iosEase }}>
             <div class="cover" class:mosaic={cv.length >= 4}>
               {#if cv.length >= 4}
                 {#each cv as c (c.id)}<img src={c.thumb} alt="" />{/each}

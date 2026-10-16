@@ -24,7 +24,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --accent: #23c07f;
     --accent-soft: rgba(35, 192, 127, 0.18);
     --bg: #000000;
@@ -43,8 +43,33 @@
     --yellow: #ffd60a;
     --blue: #0a84ff;
     --shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
   }
 }
+
+:root[data-theme='dark'] {
+    --accent: #23c07f;
+    --accent-soft: rgba(35, 192, 127, 0.18);
+    --bg: #000000;
+    --bg2: #1c1c1e;
+    --bg3: #2c2c2e;
+    --label: #ffffff;
+    --label2: rgba(235, 235, 245, 0.6);
+    --label3: rgba(235, 235, 245, 0.3);
+    --sep: rgba(84, 84, 88, 0.55);
+    --fill: rgba(120, 120, 128, 0.24);
+    --fill2: rgba(120, 120, 128, 0.36);
+    --bar: rgba(22, 22, 24, 0.8);
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --green: #30d158;
+    --yellow: #ffd60a;
+    --blue: #0a84ff;
+    --shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+}
+
+:root[data-theme='light'] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 
@@ -215,3 +240,12 @@ img { -webkit-user-drag: none; user-select: none; }
 }
 .sortable-fallback img { transform: scale(1.08); }
 .sortable-drag { opacity: 1 !important; }
+
+/* Movimento */
+@keyframes fade-in { from { opacity: 0; } }
+.thumb img { animation: fade-in 0.35s ease-out both; }
+.screen, .tap, .btn { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

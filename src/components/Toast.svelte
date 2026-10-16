@@ -1,11 +1,12 @@
 <script>
   import { app } from '../lib/state.svelte.js';
   import { fly } from 'svelte/transition';
+  import { backOut } from 'svelte/easing';
 </script>
 
 {#if app.toast}
   {#key app.toast.key}
-    <div class="toast" class:accent={app.toast.tone === 'accent'} transition:fly={{ y: -20, duration: 250 }}>{app.toast.text}</div>
+    <div class="toast" class:accent={app.toast.tone === 'accent'} in:fly={{ y: -24, duration: 380, easing: backOut }} out:fly={{ y: -12, duration: 220 }}>{app.toast.text}</div>
   {/key}
 {/if}
 

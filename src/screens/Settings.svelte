@@ -1,6 +1,6 @@
 <script>
-  import { app, formatBytes, stats, setCols, setLang, createDemo, IMPORT_PX, JPEG_QUALITY } from '../lib/state.svelte.js';
-  import { t, lang } from '../lib/i18n.svelte.js';
+  import { app, formatBytes, stats, setCols, setLang, setTheme, setImportPx, createDemo, colsNow, SIZES, JPEG_QUALITY } from '../lib/state.svelte.js';
+  import { t } from '../lib/i18n.svelte.js';
   import { offlineCapable } from '../lib/pwa.js';
   import NavBar from '../components/NavBar.svelte';
   import NavButton from '../components/NavButton.svelte';
@@ -8,7 +8,11 @@
   const bytes = $derived(app.projects.reduce((a, p) => a + stats(p).bytes, 0));
   const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   const offline = offlineCapable();
-  const langs = [{ code: 'pt', label: 'Português' }, { code: 'en', label: 'English' }];
+  const themes = ['auto', 'light', 'dark'];
+  const langs = [{ code: 'auto', label: () => t('settings.autoLang') }, { code: 'pt', label: () => 'Português' }, { code: 'en', label: () => 'English' }];
+  const colOptions = ['auto', 3, 4, 5, 6, 7, 8];
+  // Tamanho aproximado de um JPEG a 85% (cresce com a área).
+  const kb = (px) => Math.round(160 * (px / 1024) ** 2);
   async function demo() {
     const p = await createDemo();
     app.settingsOpen = false;
@@ -20,16 +24,53 @@
   {#snippet left()}<NavButton icon="back" label={t('app.projects')} onclick={() => (app.settingsOpen = false)} />{/snippet}
 </NavBar>
 <div class="scroll">
-  <div class="section-title">{t('settings.photos')}</div>
+  <div class="section-title">{t('settings.theme')}</div>
   <div class="group">
-    <div class="row"><span class="grow">{t('settings.size')}</span><span class="value">{IMPORT_PX} px</span></div>
-    <div class="row"><span class="grow">{t('settings.quality')}</span><span class="value">{Math.round(JPEG_QUALITY * 100)}%</span></div>
-    <div class="row col">
-      <div class="line"><span class="grow">{t('settings.cols')}</span><span class="value">{app.cols}</span></div>
-      <input type="range" min="3" max="8" step="1" value={app.cols} oninput={(e) => setCols(+e.currentTarget.value)} />
+    {#each themes as th}
+      <button class="row" onclick={() => setTheme(th)}>
+        <span class="swatch {th}"></span>
+        <span class="grow">{t(`settings.theme.${th}`)}</span>
+        {#if app.theme === th}<span class="ck"><Icon name="check" size={20} stroke={2.6} /></span>{/if}
+      </button>
+    {/each}
+  </div>
+
+  <div class="section-title">{t('settings.language')}</div>
+  <div class="group">
+    {#each langs as l}
+      <button class="row" onclick={() => setLang(l.code)}>
+        <span class="grow">{l.label()}</span>
+        {#if app.langPref === l.code}<span class="ck"><Icon name="check" size={20} stroke={2.6} /></span>{/if}
+      </button>
+    {/each}
+  </div>
+
+  <div class="section-title">{t('settings.cols')}</div>
+  <div class="group pad">
+    <div class="seg">
+      {#each colOptions as c}
+        <button class:on={app.cols === c} onclick={() => setCols(c)}>{c === 'auto' ? t('settings.auto') : c}</button>
+      {/each}
+    </div>
+    <div class="preview" style:--cols={colsNow()}>
+      {#each Array(colsNow()) as _, i (i)}<span></span>{/each}
     </div>
   </div>
-  <div class="foot">{t('settings.colsHint')}</div>
+  <div class="foot">{t('settings.colsAutoHint')}</div>
+
+  <div class="section-title">{t('settings.resolution')}</div>
+  <div class="group">
+    {#each SIZES as px}
+      <button class="row" onclick={() => setImportPx(px)}>
+        <div class="grow">
+          <div>{t(`settings.res.${px}`)}</div>
+          <div class="sub">{px} px · {t('settings.perPhoto', { kb: kb(px) })}</div>
+        </div>
+        {#if app.importPx === px}<span class="ck"><Icon name="check" size={20} stroke={2.6} /></span>{/if}
+      </button>
+    {/each}
+  </div>
+  <div class="foot">{t('settings.resHint')} JPEG {Math.round(JPEG_QUALITY * 100)}%.</div>
 
   <div class="section-title">{t('settings.storage')}</div>
   <div class="group">
@@ -42,32 +83,32 @@
   </div>
   <div class="foot">{t('settings.storageHint')}</div>
 
-  <div class="section-title">{t('settings.language')}</div>
-  <div class="group">
-    {#each langs as l}
-      <button class="row" onclick={() => setLang(l.code)}>
-        <span class="grow">{l.label}</span>
-        {#if lang.code === l.code}<span class="ck"><Icon name="check" size={20} stroke={2.6} /></span>{/if}
-      </button>
-    {/each}
-  </div>
-
   <div class="section-title">{t('settings.about')}</div>
   <div class="group">
     <button class="row tap" onclick={demo}>
       <span class="grow link">{t('settings.demo')}</span><Icon name="photos" size={18} />
     </button>
-    <div class="row"><span class="grow">{t('settings.version')}</span><span class="value">1.0.0</span></div>
+    <div class="row"><span class="grow">{t('settings.version')}</span><span class="value">1.1.0</span></div>
   </div>
   <div style="height: calc(var(--sab) + 30px)"></div>
 </div>
 
 <style>
   .foot { font-size: 13px; color: var(--label2); padding: 7px 20px 0; line-height: 1.35; }
-  .col { flex-direction: column; align-items: stretch; padding-top: 10px; padding-bottom: 8px; gap: 4px; }
-  .line { display: flex; }
-  input[type='range'] { width: 100%; accent-color: var(--accent); }
   .on { color: var(--green); display: inline-flex; align-items: center; gap: 4px; }
-  .ck { color: var(--accent); }
+  .ck { color: var(--accent); display: grid; animation: pop 0.25s var(--ease); }
+  @keyframes pop { from { transform: scale(0.5); opacity: 0; } }
   .link { color: var(--accent); }
+  .sub { font-size: 13px; color: var(--label2); margin-top: 1px; }
+  .row:has(.sub) { min-height: 56px; }
+  .swatch { width: 26px; height: 26px; border-radius: 7px; flex: none; border: 0.5px solid var(--sep); }
+  .swatch.light { background: #f2f2f7; }
+  .swatch.dark { background: #1c1c1e; }
+  .swatch.auto { background: linear-gradient(135deg, #f2f2f7 50%, #1c1c1e 50%); }
+  .pad { padding: 12px; }
+  .seg { display: grid; grid-template-columns: 2.4fr repeat(6, 1fr); background: var(--fill); border-radius: 9px; padding: 2px; }
+  .seg button { height: 30px; display: flex; align-items: center; justify-content: center; padding: 0 6px; white-space: nowrap; border-radius: 7px; font-size: 13px; font-weight: 600; transition: background 0.25s var(--ease), box-shadow 0.25s; }
+  .seg button.on { background: var(--bg2); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  .preview { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 3px; margin-top: 12px; }
+  .preview span { height: 26px; border-radius: 3px; background: var(--accent); opacity: 0.35; animation: pop 0.3s var(--ease); }
 </style>

@@ -1,7 +1,8 @@
 <script>
   import { app, current, mapById, photosIn, slotLabel, fileName, movePhoto, editPhoto, toast, orderedSlots } from '../lib/state.svelte.js';
   import Icon from '../components/Icon.svelte';
-  import { fade } from 'svelte/transition';
+  import { fade, scale as zoom } from 'svelte/transition';
+  import { iosEase } from '../lib/ease.js';
   import { t } from '../lib/i18n.svelte.js';
 
   const project = $derived(current());
@@ -94,7 +95,7 @@
   const targets = $derived(orderedSlots(map).filter((s) => !s.isInbox));
 </script>
 
-<div class="viewer" style:background="rgba(0,0,0,{1 - Math.min(sy / 400, 0.6)})" transition:fade={{ duration: 200 }}>
+<div class="viewer" style:background="rgba(0,0,0,{1 - Math.min(sy / 400, 0.6)})" in:zoom={{ start: 0.92, duration: 320, easing: iosEase }} out:fade={{ duration: 200 }}>
   <div class="area" bind:this={el}>
     {#if photo}
       <img

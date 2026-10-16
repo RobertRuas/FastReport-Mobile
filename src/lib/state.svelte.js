@@ -6,8 +6,9 @@ import { t, lang, locale } from './i18n.svelte.js';
 
 export const MAPS = [t24, tendons];
 export const mapById = (id) => MAPS.find((m) => m.id === id);
-export const IMPORT_PX = 1024;
 export const JPEG_QUALITY = 0.85;
+export const SIZES = [800, 1024, 1600, 2048];
+export const deviceLang = () => ((navigator.languages?.[0] || navigator.language || 'pt').toLowerCase().startsWith('pt') ? 'pt' : 'en');
 
 let uid = 0;
 const newId = (p = 'id') => `${p}${Date.now().toString(36)}${(uid++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -24,7 +25,11 @@ export const app = $state({
   alert: null, // { title, body, actions: [{label, style, run}] }
   toast: null,
   busy: null, // { text, done, total }
-  cols: 5,
+  cols: 'auto', // 'auto' ou número fixo
+  width: typeof window !== 'undefined' ? window.innerWidth : 390,
+  theme: 'auto', // 'auto' | 'light' | 'dark'
+  langPref: 'auto', // 'auto' | 'pt' | 'en'
+  importPx: 1024,
   group: null,
   persisted: false,
   updateReady: false
@@ -141,10 +146,16 @@ export async function boot() {
       }))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     if (settings.cols) app.cols = settings.cols;
-    if (settings.lang) lang.code = settings.lang;
+    if (settings.lang) app.langPref = settings.lang;
+    if (settings.theme) app.theme = settings.theme;
+    if (SIZES.includes(settings.importPx)) app.importPx = settings.importPx;
   } catch (e) {
     console.error('boot', e);
   }
+  applyLang();
+  applyTheme();
+  addEventListener('resize', () => (app.width = innerWidth));
+  addEventListener('languagechange', applyLang);
   try {
     app.persisted = (await navigator.storage?.persisted?.()) ?? false;
   } catch {}
@@ -161,16 +172,48 @@ export async function requestPersistence() {
   } catch {}
 }
 
+/** Colunas em uso: automático = pela largura do ecrã (5 num iPhone normal). */
+export function colsNow() {
+  if (app.cols !== 'auto') return app.cols;
+  return Math.max(4, Math.min(7, Math.round(app.width / 80)));
+}
+
 export function setCols(n) {
   app.cols = n;
   db.putSetting('cols', n).catch(() => {});
 }
 
-export function setLang(code) {
-  lang.code = code;
-  document.documentElement.lang = code === 'en' ? 'en' : 'pt-PT';
-  db.putSetting('lang', code).catch(() => {});
+function applyLang() {
+  lang.code = app.langPref === 'auto' ? deviceLang() : app.langPref;
+  document.documentElement.lang = lang.code === 'en' ? 'en' : 'pt-PT';
 }
+
+export function setLang(pref) {
+  app.langPref = pref;
+  applyLang();
+  db.putSetting('lang', pref).catch(() => {});
+}
+
+function applyTheme() {
+  const root = document.documentElement;
+  if (app.theme === 'auto') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', app.theme);
+  const dark = app.theme === 'dark' || (app.theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', dark ? '#000000' : '#f2f2f7'));
+}
+
+export function setTheme(theme) {
+  app.theme = theme;
+  applyTheme();
+  db.putSetting('theme', theme).catch(() => {});
+}
+
+export function setImportPx(px) {
+  app.importPx = px;
+  db.putSetting('importPx', px).catch(() => {});
+}
+
+if (typeof window !== 'undefined') matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme());
 
 // ---------- Projeto ----------
 
@@ -322,7 +365,7 @@ async function decode(blob) {
   }
 }
 
-function drawScaled(source, max = IMPORT_PX) {
+function drawScaled(source, max = app.importPx) {
   const sw = source.width || source.naturalWidth, sh = source.height || source.naturalHeight;
   const scale = Math.min(1, max / Math.max(sw, sh));
   const c = document.createElement('canvas');
@@ -481,7 +524,7 @@ export async function importZip(file) {
         const src = new Blob([bytes], { type: 'image/jpeg' });
         const bmp = await decode(src);
         const bw = bmp.width || bmp.naturalWidth, bh = bmp.height || bmp.naturalHeight;
-        const c = drawScaled(bmp, /\.jpe?g$/i.test(f.name) ? 256 : IMPORT_PX);
+        const c = drawScaled(bmp, /\.jpe?g$/i.test(f.name) ? 256 : app.importPx);
         bmp.close?.();
         let out = await encode(c);
         // JPEG vindo do Mac: guarda o ficheiro original tal e qual (sem perder qualidade).

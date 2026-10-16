@@ -1,11 +1,11 @@
 <script>
   import { fade } from 'svelte/transition';
-  import { cubicOut } from 'svelte/easing';
+  import { iosEase } from '../lib/ease.js';
   let { onclose, children, height = 'auto' } = $props();
   let dy = $state(0);
   let startY = null;
   function slide(node) {
-    return { duration: 380, easing: cubicOut, css: (t) => `transform: translateY(${(1 - t) * 100}%)` };
+    return { duration: 480, easing: iosEase, css: (t) => `transform: translate3d(0,${(1 - t) * 100}%,0)` };
   }
   function down(e) { startY = e.touches[0].clientY; }
   function move(e) { if (startY != null) dy = Math.max(0, e.touches[0].clientY - startY); }
@@ -15,7 +15,7 @@
   }
 </script>
 
-<div class="scrim" transition:fade={{ duration: 250 }} onclick={onclose} role="presentation"></div>
+<div class="scrim" transition:fade={{ duration: 300 }} onclick={onclose} role="presentation"></div>
 <div class="sheet" style:height style:transform={dy ? `translateY(${dy}px)` : null} class:dragging={dy > 0} transition:slide>
   <div class="grab" ontouchstart={down} ontouchmove={move} ontouchend={up} role="presentation"><span></span></div>
   {@render children()}
@@ -34,7 +34,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: transform 0.25s var(--ease);
+    transition: transform 0.35s var(--ease);
     box-shadow: var(--shadow);
   }
   .sheet.dragging { transition: none; }
