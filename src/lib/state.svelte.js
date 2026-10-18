@@ -35,6 +35,7 @@ export const app = $state({
   theme: 'auto', // 'auto' | 'light' | 'dark'
   langPref: 'auto', // 'auto' | 'pt' | 'en'
   ui: 1, // tamanho da interface (escala de elementos e letra)
+  zipLayout: 'folders', // 'folders' (estrutura de pastas) | 'flat' (só as fotos numa pasta)
   group: null,
   persisted: false,
   updateReady: false
@@ -155,6 +156,7 @@ export async function boot() {
     if (['auto', 'pt', 'en'].includes(settings.langPref)) app.langPref = settings.langPref;
     if (settings.theme) app.theme = settings.theme;
     if (UI_SIZES.includes(settings.ui)) app.ui = settings.ui;
+    if (['folders', 'flat'].includes(settings.zipLayout)) app.zipLayout = settings.zipLayout;
   } catch (e) {
     console.error('boot', e);
   }
@@ -223,6 +225,11 @@ export function setUi(v) {
   app.ui = v;
   applyUi();
   db.putSetting('ui', v).catch(() => {});
+}
+
+export function setZipLayout(v) {
+  app.zipLayout = v;
+  db.putSetting('zipLayout', v).catch(() => {});
 }
 
 if (typeof window !== 'undefined') matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme());
@@ -470,30 +477,48 @@ function safeFolder(name, fallback) {
   return name.replace(/[\/\\:\0]/g, '-').replace(/\.+$/, '').trim() || fallback;
 }
 
-export async function buildZip(project, onProgress) {
+/** Nome único dentro de uma pasta: "a.jpeg", "a-2.jpeg", "a-3.jpeg"… */
+function uniqueName(name, used) {
+  const dot = name.lastIndexOf('.');
+  const base = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+  let out = name;
+  for (let k = 2; used.has(out.toLowerCase()); k++) out = `${base}-${k}${ext}`;
+  used.add(out.toLowerCase());
+  return out;
+}
+
+/** layout: 'folders' (pastas do mapa + fastreport.json) ou 'flat' (todas as fotos numa só pasta). */
+export async function buildZip(project, onProgress, layout = 'folders') {
   const map = mapById(project.mapId);
+  const flat = layout === 'flat';
   const root = safeFolder(project.name, project.slug) + '/';
   const entries = [{ name: root }];
-  for (const slot of map.slots) {
-    if (slot.group && !entries.some((e) => e.name === `${root}${slot.group}/`)) entries.push({ name: `${root}${slot.group}/` });
-    entries.push({ name: `${root}${slotPath(slot)}/` });
+  if (!flat) {
+    for (const slot of map.slots) {
+      if (slot.group && !entries.some((e) => e.name === `${root}${slot.group}/`)) entries.push({ name: `${root}${slot.group}/` });
+      entries.push({ name: `${root}${slotPath(slot)}/` });
+    }
   }
+  const used = new Set();
   for (const { slot, photos } of exportPlan(project)) {
     for (let i = 0; i < photos.length; i++) {
       const rec = await db.getBlob(photos[i].id);
       const name = slot.isInbox ? `${project.slug}_Inbox_${i + 1}.jpeg` : fileName(project, slot, i + 1);
-      entries.push({ name: `${root}${slotPath(slot)}/${name}`, data: rec.full });
+      const path = flat ? root + uniqueName(name, used) : `${root}${slotPath(slot)}/${name}`;
+      entries.push({ name: path, data: rec.full });
     }
   }
-  const meta = {
-    createdAt: project.createdAt.replace(/\.\d{3}Z$/, 'Z'),
-    displayName: project.name,
-    mapId: project.mapId,
-    schemaVersion: 1
-  };
-  entries.push({ name: `${root}fastreport.json`, data: JSON.stringify(meta, null, 2) + '\n' });
+  if (!flat) {
+    const meta = {
+      createdAt: project.createdAt.replace(/\.\d{3}Z$/, 'Z'),
+      displayName: project.name,
+      mapId: project.mapId,
+      schemaVersion: 1
+    };
+    entries.push({ name: `${root}fastreport.json`, data: JSON.stringify(meta, null, 2) + '\n' });
+  }
   const blob = await makeZip(entries, onProgress);
-  return new File([blob], `${project.slug}.zip`, { type: 'application/zip' });
+  return new File([blob], `${project.slug}${flat ? '_fotos' : ''}.zip`, { type: 'application/zip' });
 }
 
 export function markExported(project) {

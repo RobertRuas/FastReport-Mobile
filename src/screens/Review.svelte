@@ -138,11 +138,10 @@
               <button class="clear tap" onclick={() => clearTrash(slot)}>{t('review.clearTrash')}</button>
             {/if}
           </div>
-          <div class="grid list" class:empty={!photos.length} data-slot={slot.id} style:--folder={`"${slot.folder}"`} use:sortable={slot.id}>
+          <div class="grid list" class:empty={!photos.length} data-slot={slot.id} use:sortable={slot.id}>
             {#each photos as ph, i (ph.id)}
               <div class="thumb" data-id={ph.id} onclick={() => view(slot.id, i)} role="presentation">
                 <img src={ph.thumb} alt="" loading="lazy" decoding="async" />
-                <span class="n"></span>
               </div>
             {/each}
           </div>
@@ -189,22 +188,6 @@
     border-radius: 8px;
   }
   .dragging .list.empty { border-color: var(--accent); background: var(--accent-soft); }
-  .n {
-    position: absolute; left: 3px; bottom: 3px;
-    max-width: calc(100% - 6px);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-size: 9px; font-weight: 600; letter-spacing: 0.01em; color: rgba(255,255,255,0.92);
-    background: rgba(0,0,0,0.38);
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    border-radius: 4px; padding: 0 4px; line-height: 14px;
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
-  }
-  /* Numeração ao vivo: atualiza enquanto arrastas (contador CSS por pasta). */
-  .list { counter-reset: n; }
-  .list .thumb { counter-increment: n; }
-  .n::after { content: var(--folder) '_' counter(n); }
-  .trash .n, .strip .n { display: none; }
   .trash .thumb img { opacity: 0.55; }
   .foot { display: grid; justify-items: center; padding: 22px 16px 28px; }
   .foot .btn { height: 40px; font-size: 15px; }

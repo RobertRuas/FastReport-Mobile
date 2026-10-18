@@ -1,5 +1,5 @@
 <script>
-  import { app, current, stats, exportPlan, buildZip, markExported, formatBytes, formatTime, confirmAlert, deleteProject, toast } from '../lib/state.svelte.js';
+  import { app, current, stats, exportPlan, buildZip, setZipLayout, markExported, formatBytes, formatTime, confirmAlert, deleteProject, toast } from '../lib/state.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import Sheet from '../components/Sheet.svelte';
   import NavButton from '../components/NavButton.svelte';
@@ -13,12 +13,20 @@
   let progress = $state(0);
   let zip = $state(null);
   const close = () => (app.sheet = null);
+  const flat = $derived(app.zipLayout === 'flat');
+  const zipName = $derived(`${p.slug}${flat ? '_fotos' : ''}.zip`);
+
+  function pick(v) {
+    if (v === app.zipLayout) return;
+    setZipLayout(v);
+    if (phase === 'built') { zip = null; phase = 'ready'; }
+  }
 
   async function build() {
     phase = 'building';
     progress = 0;
     try {
-      zip = await buildZip(p, (v) => (progress = v));
+      zip = await buildZip(p, (v) => (progress = v), app.zipLayout);
       phase = 'built';
     } catch (e) {
       console.error(e);
@@ -77,25 +85,33 @@
     <div class="zip">
       <div class="zi"><Icon name="box" size={30} stroke={1.8} /></div>
       <div class="zt">
-        <div class="zn">{p.slug}.zip</div>
-        <div class="zs">{t('export.summary', { f: folders.length, n: count, size: formatBytes(s.bytes) })}</div>
+        <div class="zn">{zipName}</div>
+        <div class="zs">{flat ? t('export.summaryFlat', { n: count, size: formatBytes(s.bytes) }) : t('export.summary', { f: folders.length, n: count, size: formatBytes(s.bytes) })}</div>
       </div>
     </div>
 
-    {#if s.pending}
+    {#if phase !== 'building'}
+      <div class="seg" role="radiogroup" aria-label={t('export.layout')}>
+        <button class:on={!flat} role="radio" aria-checked={!flat} onclick={() => pick('folders')}><Icon name="review" size={16} /> {t('export.layout.folders')}</button>
+        <button class:on={flat} role="radio" aria-checked={flat} onclick={() => pick('flat')}><Icon name="photos" size={16} /> {t('export.layout.flat')}</button>
+      </div>
+      <div class="note seg-note">{t(flat ? 'export.layout.flatHint' : 'export.layout.foldersHint')}</div>
+    {/if}
+
+    {#if s.pending && !flat}
       <div class="warn">⚠︎ {t('export.pendingWarn', { n: s.pending })}</div>
     {/if}
 
     {#if phase === 'ready'}
       <button class="btn full" onclick={build} disabled={!count}><Icon name="box" size={20} /> {t('export.build')}</button>
-      <div class="note">{t('export.help')}</div>
+      <div class="note">{t(flat ? 'export.helpFlat' : 'export.help')}</div>
     {:else if phase === 'building'}
       <div class="prog"><span style:width="{progress * 100}%"></span></div>
       <div class="note center">{t('export.building', { p: Math.round(progress * 100) })}</div>
     {:else if phase === 'built'}
       <div class="ready">{t('export.ready', { size: formatBytes(zip.size) })}</div>
       <button class="btn full pulse" onclick={deliver}><Icon name="share" size={20} /> {t('export.share')}</button>
-      <div class="note">{t('export.help')}</div>
+      <div class="note">{t(flat ? 'export.helpFlat' : 'export.help')}</div>
     {:else}
       <div class="ok"><Icon name="check" size={22} stroke={3} /> {t('export.done', { time: formatTime(p.exportedAt) })}</div>
       <button class="btn secondary full" onclick={build}>{t('export.again')}</button>
@@ -105,10 +121,14 @@
 
     <div class="section-title">{t('export.contents')}</div>
     <div class="group">
-      {#each folders as f}
-        <div class="row"><span class="grow mono">{f.slot.group ? `${f.slot.group}/` : ''}{f.slot.folder}/</span><span class="value">{f.photos.length}</span></div>
-      {/each}
-      <div class="row"><span class="grow mono">fastreport.json</span><span class="value">{t('export.metadata')}</span></div>
+      {#if flat}
+        <div class="row"><span class="grow mono">{p.name}/</span><span class="value">{count}</span></div>
+      {:else}
+        {#each folders as f}
+          <div class="row"><span class="grow mono">{f.slot.group ? `${f.slot.group}/` : ''}{f.slot.folder}/</span><span class="value">{f.photos.length}</span></div>
+        {/each}
+        <div class="row"><span class="grow mono">fastreport.json</span><span class="value">{t('export.metadata')}</span></div>
+      {/if}
     </div>
   </div>
 </Sheet>
@@ -123,6 +143,10 @@
   .zt { min-width: 0; }
   .zn { font-weight: 600; word-break: break-all; }
   .zs { font-size: 13px; color: var(--label2); margin-top: 2px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; margin: 0 16px 6px; background: var(--fill); border-radius: 9px; padding: 2px; }
+  .seg button { height: 32px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 7px; font-size: 13px; font-weight: 600; white-space: nowrap; transition: background 0.25s var(--ease), box-shadow 0.25s; }
+  .seg button.on { background: var(--bg2); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  .seg-note { margin-bottom: 14px; }
   .warn { margin: 0 16px 12px; font-size: 13px; color: var(--orange); }
   .full { display: flex; width: calc(100% - 32px); margin: 0 16px 10px; }
   .note { font-size: 13px; color: var(--label2); padding: 0 20px; line-height: 1.4; }
