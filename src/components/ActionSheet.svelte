@@ -25,6 +25,8 @@
   .as {
     position: absolute;
     left: 8px; right: 8px;
+    margin: 0 auto;
+    max-width: 500px;
     bottom: calc(var(--sab) + 8px);
     z-index: 851;
     display: grid;

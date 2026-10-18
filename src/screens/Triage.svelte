@@ -262,4 +262,22 @@
   .wide { grid-auto-flow: column; gap: 6px; align-items: center; justify-content: center; }
   .wide .kl { font-size: 16px; }
   .danger { background: #3a1d1d; color: #ff6961; }
+
+  /* Paisagem: foto à esquerda, ferramentas e teclas à direita. */
+  @media (orientation: landscape) and (max-height: 600px) {
+    .triage {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 40%);
+      grid-template-rows: auto auto auto minmax(0, 1fr);
+    }
+    header { grid-column: 1 / -1; height: calc(var(--sat) + 44px); }
+    .progress { grid-column: 1 / -1; }
+    .stage { grid-column: 1; grid-row: 3 / 5; }
+    .stage:last-child { grid-column: 1 / -1; }
+    .tools { grid-column: 2; grid-row: 3; background: #111; padding-top: 4px; }
+    .pad { grid-column: 2; grid-row: 4; overflow-y: auto; border-top: 0; border-left: 0.5px solid #2a2a2a; }
+    .tools { border-left: 0.5px solid #2a2a2a; }
+    .key { height: 38px; }
+    .seg button { height: 28px; }
+  }
 </style>

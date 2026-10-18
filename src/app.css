@@ -19,6 +19,8 @@
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   color-scheme: light dark;
 }
@@ -91,18 +93,22 @@ html, body {
 
 body { position: fixed; inset: 0; overflow: hidden; }
 
+/* Ocupa o ecrã todo, em retrato e em paisagem; em paisagem fica fora do entalhe (notch). */
 #app {
   position: absolute;
-  top: 0; bottom: 0; left: 0; right: 0;
+  top: 0; bottom: 0; left: var(--sal); right: var(--sar);
   margin: 0 auto;
-  max-width: 430px;
   overflow: hidden;
   background: var(--bg);
 }
 
-@media (min-width: 600px) {
+/* Ecrãs pretos (triagem, visualizador): as faixas ao lado do entalhe também ficam pretas. */
+body:has(.triage, .viewer) { background: #000; }
+
+/* Só no computador (rato) se mostra a app em coluna, com o tamanho de um telemóvel. */
+@media (min-width: 600px) and (hover: hover) and (pointer: fine) {
   body { background: #111; }
-  #app { box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 20px 80px rgba(0,0,0,0.5); }
+  #app { max-width: 430px; box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 20px 80px rgba(0,0,0,0.5); }
 }
 
 button {
