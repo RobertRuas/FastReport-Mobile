@@ -236,7 +236,7 @@ img { -webkit-user-drag: none; user-select: none; }
 
 /* Sortable */
 .sortable-ghost { opacity: 0.25; }
-.sortable-chosen img { transform: scale(0.94); transition: transform 0.15s; }
+.strip .sortable-chosen img, .dragging .sortable-chosen img { transform: scale(0.94); transition: transform 0.15s; }
 .sortable-fallback {
   opacity: 1 !important;
   transform-origin: center;
