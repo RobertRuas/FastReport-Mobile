@@ -18,17 +18,20 @@
   let justDragged = false;
   let dragging = $state(false);
 
+  // Nas pastas o arrasto começa logo, mas só na horizontal: na vertical a lista continua a deslizar.
+  // A faixa da Inbox desliza na horizontal, por isso mantém o premir longo.
   function sortable(node, slotId) {
+    const strip = slotId === inboxSlot.id;
     const s = Sortable.create(node, {
       group: 'photos',
       animation: 240,
       easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
-      delay: 220,
+      delay: strip ? 220 : 0,
       delayOnTouchOnly: true,
       touchStartThreshold: 6,
       forceFallback: true,
       fallbackOnBody: true,
-      fallbackTolerance: 2,
+      fallbackTolerance: strip ? 2 : 8,
       scroll: true,
       scrollSensitivity: 55,
       scrollSpeed: 16,
@@ -36,8 +39,8 @@
       draggable: '.thumb',
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
-      onChoose() { haptic(); },
-      onStart() { dragging = true; },
+      onChoose() { if (strip) haptic(); },
+      onStart() { if (!strip) haptic(); dragging = true; },
       onEnd(evt) {
         dragging = false;
         justDragged = true;
@@ -55,6 +58,25 @@
         }
       }
     });
+    if (!strip) {
+      // Decide a direção no primeiro movimento: vertical é deslizar (o Safari cancela o toque), horizontal é arrastar.
+      let x0 = 0, y0 = 0, dir = null;
+      const down = (e) => { x0 = e.clientX; y0 = e.clientY; dir = null; };
+      node.addEventListener('pointerdown', down, true);
+      const move = s._onTouchMove;
+      s._onTouchMove = (e) => {
+        if (!Sortable.active && dir !== 'x') {
+          const t = e.touches ? e.touches[0] : e;
+          const dx = Math.abs(t.clientX - x0), dy = Math.abs(t.clientY - y0);
+          if (dir === 'y') return;
+          if (Math.max(dx, dy) < 8) return;
+          dir = dx > dy ? 'x' : 'y';
+          if (dir === 'y') return;
+        }
+        move(e);
+      };
+      return { destroy: () => { node.removeEventListener('pointerdown', down, true); s.destroy(); } };
+    }
     return { destroy: () => s.destroy() };
   }
 

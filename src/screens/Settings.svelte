@@ -86,7 +86,7 @@
     <button class="row tap" onclick={demo}>
       <span class="grow link">{t('settings.demo')}</span><Icon name="photos" size={18} />
     </button>
-    <div class="row"><span class="grow">{t('settings.version')}</span><span class="value">1.3.0</span></div>
+    <div class="row"><span class="grow">{t('settings.version')}</span><span class="value">1.4.0</span></div>
   </div>
   <div style="height: calc(var(--sab) + 30px)"></div>
 </div>
