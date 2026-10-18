@@ -26,6 +26,8 @@
   .sheet {
     position: absolute;
     left: 0; right: 0; bottom: 0;
+    margin: 0 auto;
+    max-width: 640px;
     max-height: calc(100% - var(--sat) - 12px);
     z-index: 801;
     background: var(--bg);
