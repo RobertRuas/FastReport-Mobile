@@ -431,8 +431,13 @@ export async function editPhoto(project, photo, kind, crop) {
 
 // ---------- Importar fotos (fototeca ou câmara) ----------
 
+// Ordem natural: IMG_2.jpg vem antes de IMG_10.jpg
+const natural = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
 export async function importFiles(project, files) {
-  const list = [...files].filter((f) => f.type.startsWith('image/') || /\.(heic|heif|jpe?g|png|webp|tiff?|gif|bmp)$/i.test(f.name));
+  const list = [...files]
+    .filter((f) => f.type.startsWith('image/') || /\.(heic|heif|jpe?g|png|webp|tiff?|gif|bmp)$/i.test(f.name))
+    .sort((a, b) => natural.compare(a.name, b.name));
   if (!list.length) return;
   const inbox = inboxSlot(project).id;
   app.busy = { text: 'import', done: 0, total: list.length };
@@ -528,7 +533,6 @@ export function markExported(project) {
 
 // ---------- Importar ZIP do FastReport (Mac ou outro iPhone) ----------
 
-const natural = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 export async function importZip(file) {
   app.busy = { text: 'zip', done: 0, total: 1 };
